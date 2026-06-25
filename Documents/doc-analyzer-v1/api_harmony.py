@@ -398,6 +398,7 @@ async def start_analysis(
 
 
 @app.get("/api/analysis/{execution_id}")
+@app.get("/api/analysis/{execution_id}/status")
 def get_analysis_status(execution_id: str):
     """Get current analysis status"""
     if execution_id not in analyses:
