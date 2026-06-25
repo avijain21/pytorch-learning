@@ -1,0 +1,50 @@
+version: 0.2
+
+# AWS CodeBuild buildspec for Doc Analyzer
+# Builds Docker image and pushes to ECR
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - REPOSITORY_URI=199373890674.dkr.ecr.us-west-2.amazonaws.com/doc-analyzer
+      - aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $REPOSITORY_URI
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+      
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - docker build -f Dockerfile.api-only -t $REPOSITORY_URI:latest .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+      
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker images...
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo Image pushed successfully
+      - echo "Image URI:" $REPOSITORY_URI:latest
+      - echo "Tagged with:" $IMAGE_TAG
+      - |
+        echo "============================================"
+        echo "✅ BUILD SUCCESSFUL!"
+        echo "============================================"
+        echo ""
+        echo "Image URI: $REPOSITORY_URI:latest"
+        echo "Tag: $IMAGE_TAG"
+        echo ""
+        echo "Next Step: Deploy to AgentCore"
+        echo "1. Go to: https://agentcore.amazon.dev"
+        echo "2. Create Service: doc-analyzer-cx-benchmarking"
+        echo "3. Image: $REPOSITORY_URI:latest"
+        echo "4. Upload agent.yaml"
+        echo "5. Deploy to prod"
+        echo "============================================"
+
+artifacts:
+  files:
+    - '**/*'
